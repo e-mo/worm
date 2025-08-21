@@ -1,0 +1,10 @@
+[[modules]]
+name = "Wisdom Sensor Network Development"
+remote = "git@github.com:VTC-WISDOM/wisdom_sensor_net.git"
+local = "wsn/"
+
+[[modules]]
+name = "Rfm69 Radio Drivers"
+remote = "git@github.com:e-mo/rp2x_rfm69.git"
+local = "rfm/"
+ssh = "~/.ssh/github"

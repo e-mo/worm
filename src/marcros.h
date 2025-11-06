@@ -1,0 +1,1 @@
+#ifndef EMO_COMMON_MACROS_H

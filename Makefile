@@ -1,58 +1,63 @@
-# Commented generic C Makefile. 
-SHELL := /bin/bash 
-# Silence Make directory traversal.
-MAKEFLAGS  += --no-print-directory
-.SHELLFLAGS = -ec
+# Project Configuration
+PROJECT := worm
+VERSION := 0.1.0
+TARGET  := $(PROJECT)
 
-build_root  := build
-object_root := $(build_root)/obj
-source_root := src
+# Shell/Make configuration
+SHELL := /bin/bash
+MAKEFLAGS += --no-print-directory
+.SHELLFLAGS := -ec
 
-include_dirs := $(source_root) include
+BUILD_DIR := ./build
+OBJ_ROOT := $(BUILD_DIR)/obj
+SRC_ROOT := ./src
 
-include_flags := $(foreach inc_dir,$(include_dirs),-I./$(inc_dir))
-define_flags := -D_POSIX_C_SOURCE=200809L
+INC_DIRS := include $(SRC_ROOT)
 
-flags := $(include_flags) $(define_flags)
-flags += -std=c23 -Wall -Wextra -pedantic -Wno-missing-field-initializers -lgit2 
+INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-sources := $(shell find $(source_root) -type f -name '*.c')
-sources_no_root := $(foreach src,$(sources),$(patsubst $(source_root)/%,%,$(src)))
+CC ?= gcc
+CFLAGS ?= -std=c23 -g -O0 -Wall -Wextra -pedantic -Wno-missing-field-initializers -D_POSIX_C_SOURCE=200809L
+CPPFLAGS ?= $(INC_FLAGS) -MMD -MP
+LDLIBS ?= -lgit2
 
-objects := $(patsubst %.c,%.o,$(addprefix $(object_root)/,$(sources_no_root)))
-deps := $(objects:.o=.d)
-object_dir_structure := $(sort $(dir $(objects))) 
+SRCS := $(shell find $(SRC_ROOT) -type f -name '*.c')
+SRCS_NO_ROOT := $(foreach src,$(SRCS),$(patsubst $(SRC_ROOT)/%,%,$(src)))
 
-target_name := a.out
-target := $(build_root)/$(target_name)
-build_cmd := gcc $(flags) $(objects) -o $(target)
+OBJS := $(patsubst %.c,%.o,$(addprefix $(OBJ_ROOT)/,$(SRCS_NO_ROOT)))
+DEPS := $(OBJS:.o=.d)
+OBJ_DIRS := $(sort $(dir $(OBJS))) 
 
-all: $(target)
+INIT_DIRS := $(SRC_ROOT) ./include ./libs
 
-test.o: test.c
+BUILD_TARGET := $(BUILD_DIR)/$(TARGET)
+ARGS ?=
+
+all: $(BUILD_TARGET)
 	
--include $(deps)
+$(BUILD_TARGET): $(OBJS) | $(BUILD_DIR)
+	$(CC) $(OBJS) -o $@ $(LDLIBS) 
 
-$(target): $(objects) | $(build_root)
-	$(build_cmd)
+$(OBJ_ROOT)/%.o: $(SRC_ROOT)/%.c | $(OBJ_DIRS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c  $< -o $@
 
-$(object_root)/%.o: $(source_root)/%.c | $(object_dir_structure)
-	gcc $(flags) -MMD -MP -c  $< -o $@
-
-$(object_dir_structure):
+$(OBJ_DIRS):
 	mkdir -p $@
 
-$(build_root):
+$(BUILD_DIR):
 	mkdir -p $@
 
-init:
-	mkdir -p src/
-	mkdir -p include/
+init: $(INIT_DIRS)
 
-run: $(target)
-	@$(CURDIR)/$(target)
+$(INIT_DIRS):
+	mkdir -p $@
+
+run: $(BUILD_TARGET)
+	@$(CURDIR)/$(BUILD_TARGET)
 
 clean:
-	rm -rf $(object_root) $(build_root)
+	rm -rf $(OBJ_ROOT) $(BUILD_DIR)
 
 .PHONY: all run clean init
+
+-include $(DEPS)

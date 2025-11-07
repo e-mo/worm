@@ -16,10 +16,10 @@ INC_DIRS := include $(SRC_ROOT)
 
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-CC ?= gcc
-CFLAGS ?= -std=c23 -g -O0 -Wall -Wextra -pedantic -Wno-missing-field-initializers
-CPPFLAGS ?= -D_GNU_SOURCE $(INC_FLAGS) -MMD -MP 
-LDLIBS ?= -lgit2
+CC := gcc
+CFLAGS := -std=c23 -g -O0 -Wall -Wextra -pedantic -Wno-missing-field-initializers
+CPPFLAGS := -D_GNU_SOURCE $(INC_FLAGS) -MMD -MP 
+LDLIBS := libs/libgit2.a -lssl -lcrypto -lz -pthread
 
 SRCS := $(shell find $(SRC_ROOT) -type f -name '*.c')
 SRCS_NO_ROOT := $(foreach src,$(SRCS),$(patsubst $(SRC_ROOT)/%,%,$(src)))
@@ -36,7 +36,7 @@ ARGS ?= ""
 all: $(BUILD_TARGET)
 	
 $(BUILD_TARGET): $(OBJS) | $(BUILD_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(OBJS) -o $@ $(LDLIBS) 
+	$(CC) $(OBJS) -o $@ $(LDLIBS) 
 
 $(OBJ_ROOT)/%.o: $(SRC_ROOT)/%.c | $(OBJ_DIRS)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c  $< -o $@

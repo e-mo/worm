@@ -10,24 +10,21 @@
 #include <git2.h>
 
 // Internal headers.
-#include "ansi.h"   // ANSI escape codes.
-#include "worm_clone.h"
-#include "worm_error.h"
+#include "ansi.h"       // ANSI escape codes (for terminal text formatting).
+#include "worm_error.h" // Error handling.
+#include "worm_clone.h" // Clone command.
 
-#include "layer/macros.h"
+#include "args.h"
 
-int main(int argc, char **argv) {
-    (void)argc;
-    (void)argv;
+int cmd_help(void) {
+    args_print_usage();
+    return 0;
+}
 
-    int git_err;
-    if ((git_err = git_libgit2_init()) < 0) {
-        print_git_error(git_err);
-        return WORM_ERROR_GIT;
-    }
-
-    // TODO: accept an arg and use it here.
-    int status = worm_clone(nullptr);
+int cmd_clone(const char *config_root) {
+    printf("Attempting to parse 'worm.toml' from root '%s'.\n", config_root);
+    
+    int status = worm_clone(config_root);
     switch(status) {
     case WORM_OK:
         printf("Worm clone compeleted.\n");
@@ -47,6 +44,37 @@ int main(int argc, char **argv) {
         break;
     default:
         REPORT_ERROR(ERR_FD, "BUG", "unhandled return value > %d", status);
+    }
+    
+    return status;
+}
+
+
+int main(int argc, char **argv) {
+    args_t args = args_parse(argc, argv);
+
+    if (args.command == CMD_NONE)
+        return WORM_ERROR;
+
+    int git_err;
+    if ((git_err = git_libgit2_init()) < 0) {
+        print_git_error(git_err);
+        return WORM_ERROR_GIT;
+    }
+
+    int status = -1;
+    switch (args.command) {
+        case CMD_HELP:
+            status = cmd_help();
+            break;
+
+        case CMD_CLONE:
+            status = cmd_clone(args.config_root);
+            break;
+            
+        case CMD_NONE:
+            status = WORM_ERROR;;  // Shouldn't reach here
+            break;
     }
 
     while ((git_err = git_libgit2_shutdown()) > 0);

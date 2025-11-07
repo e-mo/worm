@@ -1,9 +1,8 @@
 
-#ifndef ANSI_COLORS_H
-#define ANSI_COLORS_H
-// ============================================================================
+#ifndef ANSI_ESCAPE_H
+#define ANSI_ESCAPE_H
+
 // TEXT FORMATTING
-// ============================================================================
 #define ANSI_RESET           "\033[0m"       // Reset all attributes
 #define ANSI_BOLD            "\033[1m"       // Bold/Bright
 #define ANSI_DIM             "\033[2m"       // Dim/Faint
@@ -25,9 +24,7 @@
 #define ANSI_RESET_HIDDEN    "\033[28m"
 #define ANSI_RESET_STRIKE    "\033[29m"
 
-// ============================================================================
 // FOREGROUND COLORS (30-37: Standard, 90-97: Bright)
-// ============================================================================
 #define ANSI_FG_BLACK        "\033[30m"
 #define ANSI_FG_RED          "\033[31m"
 #define ANSI_FG_GREEN        "\033[32m"
@@ -48,9 +45,7 @@
 #define ANSI_FG_BRIGHT_CYAN    "\033[96m"
 #define ANSI_FG_BRIGHT_WHITE   "\033[97m"
 
-// ============================================================================
 // BACKGROUND COLORS (40-47: Standard, 100-107: Bright)
-// ============================================================================
 #define ANSI_BG_BLACK        "\033[40m"
 #define ANSI_BG_RED          "\033[41m"
 #define ANSI_BG_GREEN        "\033[42m"
@@ -71,47 +66,35 @@
 #define ANSI_BG_BRIGHT_CYAN    "\033[106m"
 #define ANSI_BG_BRIGHT_WHITE   "\033[107m"
 
-// ============================================================================
 // CURSOR MOVEMENT
-// ============================================================================
 #define ANSI_CURSOR_HOME         "\033[H"        // Move to 0,0
-
-// ============================================================================
 // CURSOR VISIBILITY
-// ============================================================================
 #define ANSI_CURSOR_HIDE         "\033[?25l"     // Hide cursor
 #define ANSI_CURSOR_SHOW         "\033[?25h"     // Show cursor
-
-// ============================================================================
-// SCREEN MANIPULATION
-// ============================================================================
-#define ANSI_CLEAR_SCREEN        "\033[2J"       // Clear entire screen
-#define ANSI_CLEAR_LINE          "\033[2K"       // Clear entire line
-#define ANSI_CLEAR_TO_EOL        "\033[K"        // Clear from cursor to end of line
-#define ANSI_CLEAR_TO_BOL        "\033[1K"       // Clear from cursor to beginning of line
-#define ANSI_CLEAR_TO_EOS        "\033[J"        // Clear from cursor to end of screen
-#define ANSI_CLEAR_TO_BOS        "\033[1J"       // Clear from cursor to beginning of screen
-
-// ============================================================================
-// SCROLLING
-// ============================================================================
-#define ANSI_SCROLL_UP           "\033[S"        // Scroll up one line
-#define ANSI_SCROLL_DOWN         "\033[T"        // Scroll down one line
-
-// ============================================================================
 // SAVE/RESTORE CURSOR POSITION
-// ============================================================================
 #define ANSI_CURSOR_SAVE         "\033[s"        // Save cursor position
 #define ANSI_CURSOR_RESTORE      "\033[u"        // Restore cursor position
 // Alternative (more widely supported):
 #define ANSI_CURSOR_SAVE_ALT     "\0337"
 #define ANSI_CURSOR_RESTORE_ALT  "\0338"
 
-// ============================================================================
+// SCREEN MANIPULATION
+#define ANSI_CLEAR_SCREEN        "\033[2J"       // Clear entire screen
+#define ANSI_CLEAR_LINE          "\033[2K"       // Clear entire line
+#define ANSI_CLEAR_TO_EOL        "\033[K"        // Clear from cursor to end of line
+#define ANSI_CLEAR_TO_BOL        "\033[1K"       // Clear from cursor to beginning of line
+#define ANSI_CLEAR_TO_EOS        "\033[J"        // Clear from cursor to end of screen
+#define ANSI_CLEAR_TO_BOS        "\033[1J"       // Clear from cursor to beginning of screen
+// SCROLLING
+#define ANSI_SCROLL_UP           "\033[S"        // Scroll up one line
+#define ANSI_SCROLL_DOWN         "\033[T"        // Scroll down one line
+
 // TERMINAL MODES
-// ============================================================================
 #define ANSI_ALT_SCREEN_ENABLE   "\033[?1049h"   // Enable alternative screen buffer
 #define ANSI_ALT_SCREEN_DISABLE  "\033[?1049l"   // Disable alternative screen buffer
+
+// A bunch of example functions of which I am NOT the author. Just pasted them here
+// to use as templates for a few things.
 
 // // ============================================================================
 // // 256 COLOR MODE FUNCTIONS
@@ -242,4 +225,4 @@
 //     printf("Back to saved position!\n");
 // }
 
-#endif // ANSI_COLORS_H
+#endif // ANSI_ESCAPE_H

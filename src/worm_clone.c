@@ -6,6 +6,7 @@
 #include "worm_cfg.h"
 #include "prompt.h"
 
+#include "repo_utility.h"
 
 enum worm_clone_state {
     CLONE_SUCCESS = 0,
@@ -26,11 +27,12 @@ static constexpr int MAX_AUTH_ATTEMPTS = 3;
 int worm_clone(const char *root) {
     int status = -1;
     worm_cfg_stack stack = {0};
-            
+
     // Parse first worm file.
     status = worm_cfg_file_parse(root, &stack);
-    if (status != WORM_OK)
+    if (status != WORM_OK) {
         goto RETURN;
+    }
 
     int skips = 0;
     while (worm_cfg_stack_is_empty(&stack) == false) {
@@ -51,11 +53,25 @@ int worm_clone(const char *root) {
 
         switch(_clone_cfg(&config)) {
         case CLONE_SUCCESS:
+
+            git_repository *repo = get_current_repo();
+            if (repo != nullptr) {
+
+                // Build submodule path from root and local;
+                char submodule_path[PATH_MAX];
+                size_t bytes = snprintf(submodule_path, sizeof(submodule_path),
+                         "%s/%s", config.root, config.local);
+                if (bytes > sizeof(submodule_path))
+                    REPORT_ABORT(ERR_FD, "BUG", "path concatination exceeds PATH_MAX.");
+
+                add_submodule_to_gitignore(repo, submodule_path);
+            }
+            if (repo != nullptr)
+            // Process nested worm config if it exists.
             status = worm_cfg_file_parse(config.local, &stack);
-            
             // Found and parsed another worm config file.
             if (status == WORM_OK) {
-                printf("Nested '%s/worm.toml' parsed.", config.local);
+                printf("Nested 'worm.toml' parsed.\n");
                 continue;
             }
             // Nothing to parse. 
@@ -64,7 +80,7 @@ int worm_clone(const char *root) {
 
             // File found, but failed to parse. 
             if (status == WORM_ERROR_CFG_PARSE) {
-                printf("Nested '%s/worm.toml' found, but parsing failed.", config.local);
+                printf("Nested 'worm.toml' found, but parsing failed.\n");
                 break;
             }
 
@@ -74,7 +90,7 @@ int worm_clone(const char *root) {
 
         // SSH key was not found.
         case CLONE_BAD_KEY_PATH:
-            printf("Bad path to SSH key -> '%s'\n", config.ssh.private);
+            printf("Unable to find SSH key.\n");
             break;
 
         // Bad passphrase after max attempts.
@@ -93,8 +109,8 @@ int worm_clone(const char *root) {
         skips += 1;
     }
 
-RETURN:
     status = skips ? WORM_ERROR : WORM_OK;
+RETURN:
     return status;
 }
 
@@ -124,7 +140,7 @@ static int _clone_cfg(worm_cfg *config) {
             // contents of local directory.
             char choice[256]; 
             prompt_user(choice, 256, true,
-                        "Would you like to proceed and clobber '%s'? (yes/no): ", config->local);
+                        "Clobber '%s/%s'? CANNOT BE REVERSED (yes/no): ", config->root, config->local);
 
             if (!strcmp(choice, "yes")) {
                 printf("Clobbering '%s'...\n", config->local);
@@ -132,7 +148,6 @@ static int _clone_cfg(worm_cfg *config) {
                 sprintf(command, "rm -rf %s", config->local);
                 system(command);
             } else {
-                printf("Not authorized to clobber '%s'.\n", config->local);
                 status = CLONE_SKIP;
                 goto RETURN;
             }
@@ -142,7 +157,7 @@ static int _clone_cfg(worm_cfg *config) {
         case CLONE_SSH_AUTH_REQUEST:
             printf("SSH authentication requested...\n");
             if (!strlen(config->ssh.private))
-                prompt_user(config->ssh.private, PATH_MAX, true, "Path to private key file: ");
+                prompt_user(config->ssh.private, PATH_MAX, true, "Enter path to SSH key: ");
 
             config->gco.fetch_opts.callbacks.credentials = worm_cfg_ssh_auth_cb;
             config->gco.fetch_opts.callbacks.payload = config;
@@ -156,7 +171,7 @@ static int _clone_cfg(worm_cfg *config) {
             auth_attempts += 1;
 
             prompt_user(config->ssh.passphrase, SSH_KEY_PASSPHRASE_MAX, false,
-                    "Passphrase required for encrypted key file '%s': ", config->ssh.private);
+                "Enter passphrase for key '%s': ", config->ssh.private);
 
             fflush(stdout);
 
@@ -172,15 +187,22 @@ static int _clone_repository(worm_cfg *config) {
     git_repository *repo CLEANUP(repo_cleanup) = nullptr;
 
     int git_err = git_clone(&repo, config->remote, config->local, &config->gco);
-    
+
+    if (git_err == GIT_OK) {
+        if (strncmp(config->remote, "https://github.com/", 19) == 0) {
+            const char *path_part = config->remote + 19;        
+
+            char ssh_url[512];
+            snprintf(ssh_url, sizeof(ssh_url), "git@github.com:%s", path_part);
+        
+            git_remote_set_url(repo, "origin", ssh_url);
+        }        
+
+        return CLONE_SUCCESS;
+    }
+        
     const git_error *last = git_error_last();
     switch (last->klass) {
-
-    case GIT_ERROR_NONE:
-        if (git_err == GIT_OK)
-            return CLONE_SUCCESS;
-        break;
-
     case GIT_ERROR_SSH:
         // SSH auth requested.
         if (git_err == GIT_EAUTH)
@@ -195,17 +217,16 @@ static int _clone_repository(worm_cfg *config) {
             return CLONE_PASSPHRASE_REQUEST;
         break;
 
-    case GIT_ERROR_INDEX:
-        if (git_err == GIT_OK)
-            return CLONE_SUCCESS;
-        break;
-
     case GIT_ERROR_INVALID:
         // Directory already exists.
         if (git_err == GIT_EEXISTS)
             return CLONE_DIR_EXISTS;
+        if (git_err == GIT_ERROR && strstr(last->message, "invalid argument: 'privatekey'") != nullptr)
+            return CLONE_BAD_KEY_PATH;
+
         break;
     }
+
     REPORT_ABORT(ERR_FD, "BUG", "Unexpected libgit2 error > (%d/%d: %s).", git_err, last->klass, last->message);
     __builtin_unreachable();
 }

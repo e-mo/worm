@@ -144,7 +144,7 @@ int worm_cfg_file_parse(const char *root, worm_cfg_stack *stack) {
         strcpy(config.remote, remote.u.s);
 
         toml_value_t local = toml_table_string(module, "local");
-        if (!local.ok) {
+        if (!local.ok || local.u.s[0] == '/') {
             status = WORM_ERROR_CFG_PARSE;
             goto RETURN;
         }
